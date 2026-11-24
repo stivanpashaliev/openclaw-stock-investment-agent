@@ -17,10 +17,10 @@ def build_portfolio(
     No real trades are executed.
     """
 
-    if budget <= 0:
+    if not math.isfinite(budget) or budget <= 0:
         raise ValueError("Budget must be greater than zero.")
 
-    if not 0 < max_weight <= 1:
+    if not math.isfinite(max_weight) or not 0 < max_weight <= 1:
         raise ValueError("max_weight must be between 0 and 1.")
 
     if not ranked_stocks:
@@ -40,11 +40,6 @@ def build_portfolio(
 
         scores[ticker] = score
 
-    if len(scores) * max_weight < 1:
-        raise ValueError(
-            "Not enough stocks to satisfy the maximum weight constraint."
-        )
-
     eligible = {
         ticker: score
         for ticker, score in scores.items()
@@ -53,6 +48,11 @@ def build_portfolio(
 
     if not eligible:
         raise ValueError("No stocks have a positive ranking score.")
+
+    if len(eligible) == 1 and max_weight < 1:
+        raise ValueError(
+            "Not enough stocks to satisfy the maximum weight constraint."
+        )
 
     for ticker in eligible:
         if ticker not in prices:
@@ -76,8 +76,9 @@ def build_portfolio(
     while True:
         exceeded = [
             ticker
-            for ticker, weight in weights.items()
-            if ticker not in capped and weight > max_weight
+            for ticker in weights
+            if ticker not in capped
+            and weights[ticker] > max_weight + 1e-12
         ]
 
         if not exceeded:
@@ -87,7 +88,8 @@ def build_portfolio(
             weights[ticker] = max_weight
             capped.add(ticker)
 
-        remaining = 1.0 - sum(weights.values())
+        remaining = 1.0 - sum(weights[ticker] for ticker in capped)
+
         uncapped = [
             ticker for ticker in weights
             if ticker not in capped
