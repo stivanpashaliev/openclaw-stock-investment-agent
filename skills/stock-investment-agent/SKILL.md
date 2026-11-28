@@ -1,85 +1,158 @@
 ---
 name: stock-investment-agent
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Analyze stocks using real market data, calculate financial risk and return metrics, rank a stock universe, construct a simulated investment portfolio from a user budget, and backtest portfolio performance. Use when users request stock analysis, comparisons, rankings, portfolio allocation, or historical performance simulations.
 ---
 
 # Stock Investment Agent
 
 ## Overview
 
-[TODO: 1-2 sentences explaining what this skill enables]
+This Skill provides a workflow for using the Stock Investment Agent Python engine.
+It retrieves market data, calculates deterministic metrics, ranks stocks,
+constructs simulated portfolios, and evaluates historical performance.
 
-## Structuring This Skill
+Python is responsible for numerical calculations. The AI interprets the returned
+results, explains trade-offs, and communicates limitations. Never invent
+financial data or claim a tool ran when it did not.
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+## Capabilities
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" -> "Reading" -> "Creating" -> "Editing"
-- Structure: ## Overview -> ## Workflow Decision Tree -> ## Step 1 -> ## Step 2...
+- `analyze`: analyze one stock's historical performance.
+- `rank`: compare and rank multiple stocks.
+- `portfolio`: create a budget-based simulated portfolio.
+- `backtest`: simulate portfolio performance on historical price data.
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" -> "Merge PDFs" -> "Split PDFs" -> "Extract Text"
-- Structure: ## Overview -> ## Quick Start -> ## Task Category 1 -> ## Task Category 2...
+## Project Setup
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" -> "Colors" -> "Typography" -> "Features"
-- Structure: ## Overview -> ## Guidelines -> ## Specifications -> ## Usage...
+Project root:
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" -> numbered capability list
-- Structure: ## Overview -> ## Core Capabilities -> ### 1. Feature -> ### 2. Feature...
+`~/projects/stock-investment-agent`
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+Use the project's virtual environment Python:
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+`./.venv/bin/python`
 
-## [TODO: Replace with the first main section based on chosen structure]
+Run commands from the project root and set `PYTHONPATH=src`.
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+## Workflow
 
-## Resources (optional)
+### 1. Understand the user's request
 
-Create only the resource directories this skill actually needs. Delete this section if no resources are required.
+Identify:
+- Stock ticker symbols
+- Analysis period (default: `1y`)
+- Budget, if portfolio construction is requested
+- Whether the user wants analysis, ranking, portfolio construction, backtesting, or a combination
 
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
+Ask only for essential missing information. Do not silently assume a budget.
 
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
+### 2. Analyze a single stock
 
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
+Use:
 
-**Note:** Scripts may be executed without loading into context, but can still be read by Codex for patching or environment adjustments.
+`PYTHONPATH=src ./.venv/bin/python -m stock_agent.cli analyze TICKER --period 1y`
 
-### references/
-Documentation and reference material intended to be loaded into context to inform Codex's process and thinking.
+Replace `TICKER` with the requested symbol and period with the requested supported period.
 
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
+Explain the returned total return, annualized volatility, and maximum drawdown. Distinguish historical performance from future expectations.
 
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Codex should reference while working.
+### 3. Rank multiple stocks
 
-### assets/
-Files not intended to be loaded into context, but rather used within the output Codex produces.
+Use:
 
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
+`PYTHONPATH=src ./.venv/bin/python -m stock_agent.cli rank --tickers AAPL,MSFT,NVDA,GOOGL,AMZN --period 1y`
 
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
+Replace the example tickers with the user's list.
 
----
+The ranking uses the project's weighted scoring methodology:
+- Return: 50%
+- Volatility: 25% (lower is better)
+- Maximum drawdown: 25% (smaller drawdown is better)
 
-**Not every skill requires all three types of resources.**
+Scores are normalized relative to the selected stock universe. A score of 100
+does not mean a stock is universally best; it means it scores best within
+the current comparison set.
+
+### 4. Build a simulated portfolio
+
+Use:
+
+`PYTHONPATH=src ./.venv/bin/python -m stock_agent.cli portfolio --tickers AAPL,MSFT,NVDA,GOOGL,AMZN --budget 10000 --period 1y`
+
+Replace tickers, budget, and period with the user's request.
+
+Explain:
+- Each holding and its ticker
+- Score and portfolio weight
+- Number of whole shares
+- Amount invested
+- Remaining cash
+
+The Portfolio Builder uses ranking scores, enforces position-size limits,
+and buys whole shares only. Stocks with zero scores may be excluded.
+Cash can remain uninvested due to allocation limits or whole-share rounding.
+
+This is a simulation, not a trade order.
+
+### 5. Run a backtest
+
+Use:
+
+`PYTHONPATH=src ./.venv/bin/python -m stock_agent.cli backtest --tickers AAPL,MSFT,NVDA,GOOGL,AMZN --capital 10000 --period 1y`
+
+Replace the example tickers, capital, and period as needed.
+
+Explain the returned:
+- Total return
+- Annualized return
+- Annualized volatility
+- Maximum drawdown
+- Sharpe ratio
+- Portfolio value over time
+
+Important methodological limitation: the current backtesting workflow derives
+weights using rankings from the same historical period being simulated. This
+introduces look-ahead bias. Results are illustrative and must not be presented
+as proof of future profitability or as a valid predictive backtest. A
+walk-forward backtest is a future improvement.
+
+### 6. Combined analysis workflow
+
+When a user asks for a full investment analysis:
+
+1. Analyze or rank the requested stocks.
+2. If a budget is provided, build a simulated portfolio.
+3. If historical evaluation is requested, run a backtest.
+4. Summarize the results using the actual tool outputs.
+5. Explain the methodology, risks, assumptions, and limitations.
+
+Do not run unnecessary operations. If a user only asks for ranking, do not
+automatically build a portfolio or backtest unless it is useful or requested.
+
+## Financial Safety and Accuracy
+
+- Never fabricate prices, returns, scores, holdings, or backtest results.
+- Use actual tool output for all numerical claims.
+- If a command fails or data is unavailable, state that clearly.
+- Historical performance is not a guarantee of future performance.
+- This project provides analysis and simulation only; it does not execute trades.
+- Explain that the stock scoring system is a project methodology, not a
+  universally accepted investment standard.
+- Avoid claiming certainty or guaranteed returns.
+- Clearly identify the backtesting look-ahead-bias limitation.
+- Do not expose API keys, credentials, or environment secrets.
+- Do not execute unrelated shell commands or modify project files during
+  analysis unless the user explicitly requests development work.
+
+## Response Format
+
+When presenting an investment analysis, prefer this structure:
+
+1. **Executive summary**
+2. **Ranking or portfolio table**
+3. **Key metrics**
+4. **Why the results look this way**
+5. **Risks and limitations**
+6. **Methodology and data period**
+
+Be concise, transparent, and understandable to a non-expert.
